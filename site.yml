@@ -7,7 +7,7 @@
   roles:
   - role: testfate
 
-- hosts: all
-  roles:
-  - role: kubefate
-  - role: fate
+    #- hosts: all
+    #  roles:
+    #  - role: kubefate
+    #  - role: fate
