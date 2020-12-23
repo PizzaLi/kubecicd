@@ -1,0 +1,13 @@
+---
+- hosts: centos701.nimbus.vmware.com
+  roles:
+  - role: testkubefate
+
+- hosts: centos702.nimbus.vmware.com
+  roles:
+  - role: testfate
+
+- hosts: all
+  roles:
+  - role: kubefate
+  - role: fate
