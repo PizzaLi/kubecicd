@@ -1,0 +1,110 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    lock_dir: "/tmp/ansible-playbook-{{ ansible_host }}.lock"
+    state_timeout: 180
+  tasks:
+    - name: Locking Simultaneous Access to Hosts in Playbooks
+      block:
+        - name: create lock dir if not exists
+          command: mkdir "{{ lock_dir }}"
+          args:
+            warn: false
+          register: lockcode
+          ignore_errors: true
+          changed_when: "lockcode.rc|int==0"
+        - debug:
+            msg: "{{ lockcode.changed }}"
+
+        - name: Wait until lock file has been deleted or timeout
+          block:
+          - name: Shell to Get Epoch
+            command: date +%s
+            register: ansible_date_time_epoch
+          - debug:
+              msg: "{{ ansible_date_time_epoch.stdout }}"
+
+          - name: Get info on lock_dir
+            stat:
+              path: "{{ lock_dir }}"
+            register: lock_dir_cfg
+          - debug:
+              msg: "{{ lock_dir_cfg.stat.mtime }}"
+
+          - name: Get Epochs Info
+            block:
+              - name: Module to Get Epoch
+                command: date +%s
+                register: ansible_date_time_epoch
+              - debug:
+                  msg: "{{ ansible_date_time_epoch.stdout }}"
+
+              - name: Get info on lock_dir
+                stat:
+                  path: "{{ lock_dir }}"
+                register: lock_dir_cfg
+              - debug:
+                  msg: "{{ lock_dir_cfg.stat.mtime }}"
+
+              - name: Debug date comparison
+                debug:
+                  msg: "wait_for timeout={{ (state_timeout - (ansible_date_time_epoch.stdout|float - lock_dir_cfg.stat.mtime))|int }}"
+
+              - name: wait for lock file to be absent
+                wait_for:
+                  path: "{{ lock_dir }}"
+                  state: absent
+                  timeout: "{{ (state_timeout - (ansible_date_time_epoch.stdout|float - lock_dir_cfg.stat.mtime))|int }}"
+                ignore_errors: true
+                register: waitfor
+                when:
+                  - (ansible_date_time_epoch.stdout|float - lock_dir_cfg.stat.mtime) > 0
+                  - (ansible_date_time_epoch.stdout|float - lock_dir_cfg.stat.mtime) < state_timeout
+
+              - name: Remove lock file lock_dir
+                block:
+                  - name: Remove lock file lock_dir
+                    file:
+                      path: "{{ lock_dir }}"
+                      state: absent
+
+                  - name: Sleep for 2 seconds for all waiting processes to make the file absent, May need to increase this
+                    wait_for:
+                      delay: 2
+                      timeout: 0
+                when: (waitfor.skipped is defined and waitfor.skipped) or (waitfor.state is defined and waitfor.state!="absent") 
+          when: lockcode.rc|int==1
+
+        - name: create lock dir if not exists, if it got deleted by other waiting workers
+          file:
+            path: "{{ lock_dir }}"
+            state: directory
+          register: check_if_changed
+
+        # - name: Check if the lock_dir needed to be recreated
+        #   debug:
+        #     msg: "CHECK This means some worker deleted the lock file: {{ check_if_changed.changed }}, increase the delay after remove lock file lock_dir above"
+        #   when: check_if_changed.changed
+        # - assert:
+        #     that:
+        #       - not check_if_changed.changed
+
+        - name: Test waiting
+          wait_for:
+            delay: 20
+            timeout: 0
+          register: done
+
+        - name: Remove lock file lock_dir
+          block:
+            - name: Remove lock file lock_dir
+              file:
+                path: "{{ lock_dir }}"
+                state: absent
+          when: done.state=="started"
+
+      rescue:
+        - debug:
+            msg: "Running again"
