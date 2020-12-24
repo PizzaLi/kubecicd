@@ -83,9 +83,9 @@
     #     that:
     #       - not check_if_changed.changed
 
-    - name: Test waiting
+    - name: Please wait, Job is running...
       wait_for:
-        delay: 20
+        delay: 240
         timeout: 0
       register: done
 
