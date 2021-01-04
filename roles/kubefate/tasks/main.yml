@@ -61,10 +61,12 @@
                 file:
                   path: "{{ lock_dir }}"
                   state: absent
+                become: yes
+                become_method: sudo
 
-              - name: Sleep for 2 seconds for all waiting processes to make the file absent, May need to increase this
+              - name: Sleep for {{ wait_processes_rm_lock_file }} seconds for all waiting processes to make the file absent, May need to increase this
                 wait_for:
-                  delay: 2
+                  delay: "{{ wait_processes_rm_lock_file }}"
                   timeout: 0
             when: (waitfor.skipped is defined and waitfor.skipped) or (waitfor.state is defined and waitfor.state!="absent") 
       when: lockcode.rc|int==1
@@ -85,7 +87,7 @@
 
     - name: Please wait, Job is running...
       wait_for:
-        delay: 240
+        delay: 20
         timeout: 0
       register: done
 

@@ -1,2 +1,6 @@
+[kubecicdservers]
 centos701.nimbus.vmware.com
 centos702.nimbus.vmware.com
+ubuntu180401.nimbus.vmware.com
+ubuntu180402.nimbus.vmware.com
+ubuntu180403.nimbus.vmware.com
