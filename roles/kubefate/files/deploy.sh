@@ -176,10 +176,6 @@ clean()
 {
   echo "Deleting kind cluster..." 
   # kind delete cluster --name kubefate
-
-  if [ -d /tmp/kubefate ]; then
-    sudo rm -rf /tmp/kubefate/
-  fi
 }
 
 create_cluster_with_kind()
@@ -211,7 +207,7 @@ main()
   clean
   # Check if docker is installed already
   docker_status=`sudo docker ps`
-  if [ $? == 0 ]; then
+  if [ $? -eq 0 ]; then
     echo "Docker is installed on this host, no need to install"
   else
     # Install the latest version of kubectl
@@ -246,16 +242,15 @@ main()
 
     # check if docker is installed correctly
     docker=`sudo docker ps`
-    if [ $? -ne == 0 ]; then
+    if [ $? -ne 0 ]; then
       echo "Fatal: Docker is not installed correctly"
       exit 1
     fi
-    echo "Docker is installed on this host, no need to install"
   fi
 
   # Install Kind
   kind_status=`sudo kind version`
-  if [ $? == 0 ]; then
+  if [ $? -eq 0 ]; then
     echo "Kind is installed on this host, no need to install"
   else
     curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/bin/kind
@@ -290,7 +285,7 @@ main()
 
   # Check the commands above have been executed correctly
   state=`kubefate version`
-  if [ $? -ne == 0 ]; then
+  if [ $? -ne 0 ]; then
     echo "Fatal: There is something wrong with the installation of kubefate, please check"
     exit 1
   fi
@@ -307,7 +302,6 @@ namespace: fate-9999
 chartName: fate
 chartVersion: v1.5.0
 partyId: 9999
-registry: "hub.c.163.com/federatedai"
 pullPolicy:
 persistence: false
 istio:
@@ -343,7 +337,6 @@ namespace: fate-10000
 chartName: fate
 chartVersion: v1.5.0
 partyId: 10000
-registry: "hub.c.163.com/federatedai"
 pullPolicy:
 persistence: false
 istio:
