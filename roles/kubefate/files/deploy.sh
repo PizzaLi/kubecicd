@@ -259,6 +259,16 @@ main()
   # Create a cluster using kind with enable Ingress step 1.
   create_cluster_with_kind
 
+  #
+  cluster_ip=`kubectl get service -o wide -A | grep ingress-nginx-controller-admission | awk -F ' ' '{print $4}'`
+  ingress_nginx_controller_admission=`cat /etc/hosts | grep "ingress-nginx-controller-admission"`
+  if [ "$ingress_nginx_controller_admission" == "" ]; then
+    sudo echo "${cluster_ip}    ingress-nginx-controller-admission" >> /etc/hosts
+  else
+    sudo sed -i "/ingress-nginx-controller-admission/d" /etc/hosts
+    sudo echo "${cluster_ip}    ingress-nginx-controller-admission" >> /etc/hosts
+  fi
+
   # Load images to kind cluster
   kind load docker-image jettech/kube-webhook-certgen:v1.5.0
   kind load docker-image federatedai/kubefate
@@ -271,6 +281,13 @@ main()
   wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
   sed -i "s#- --publish-status-address=localhost#- --publish-status-address=${ip}#g" ./deploy.yaml
   kubectl apply -f deploy.yaml
+  kubefate_domain=`cat /etc/hosts | grep "kubefate.net"`
+  if [ "$kubefate_domain" == "" ]; then
+    sudo echo "${ip}    kubefate.net" >> /etc/hosts
+  else
+    sudo sed -i "/kubefate.net/d" /etc/hosts
+    sudo echo "${ip}    kubefate.net" >> /etc/hosts
+  fi
 
   # Download KubeFATE Release Pack, KubeFATE Server Image v1.2.0 and Install KubeFATE Command Lines
   curl -LO https://github.com/FederatedAI/KubeFATE/releases/download/${version}/kubefate-k8s-${version}.tar.gz && tar -xzf ./kubefate-k8s-${version}.tar.gz
