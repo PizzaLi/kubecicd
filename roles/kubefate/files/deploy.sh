@@ -264,7 +264,12 @@ main()
   kind load docker-image federatedai/kubefate:v1.2.0
   kind load docker-image mariadb:10
 
-  #
+  # Enable Ingress step 2.
+  wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
+  sed -i "s#- --publish-status-address=localhost#- --publish-status-address=${ip}#g" ./deploy.yaml
+  kubectl apply -f deploy.yaml
+
+  # Config Ingress
   time_out=900
   i=0
   cluster_ip=`kubectl get service -o wide -A | grep ingress-nginx-controller-admission | awk -F ' ' '{print $4}'`
@@ -275,12 +280,24 @@ main()
         exit 1
     fi
 
-    echo "Kind Ingress is not ready, waiting Ingress to get ready..."
+    echo "Kind Ingress is not ready, Waiting for Ingress to get ready..."
     cluster_ip=`kubectl get service -o wide -A | grep ingress-nginx-controller-admission | awk -F ' ' '{print $4}'`
     sleep 1
     let i+=1
   done
   echo "Got Ingress Cluster IP: " $cluster_ip
+
+  # Reinstall Ingress
+  kubectl apply -f deploy.yaml
+
+  ip=`kubectl get nodes -o wide | sed -n "2p" | awk -F ' ' '{printf $6}'`
+  kubefate_domain=`cat /etc/hosts | grep "kubefate.net"`
+  if [ "$kubefate_domain" == "" ]; then
+    sudo echo "${ip}    kubefate.net" >> /etc/hosts
+  else
+    sudo sed -i "/kubefate.net/d" /etc/hosts
+    sudo echo "${ip}    kubefate.net" >> /etc/hosts
+  fi
     
   ingress_nginx_controller_admission=`cat /etc/hosts | grep "ingress-nginx-controller-admission"`
   if [ "$ingress_nginx_controller_admission" == "" ]; then
@@ -288,19 +305,6 @@ main()
   else
     sudo sed -i "/ingress-nginx-controller-admission/d" /etc/hosts
     sudo echo "${cluster_ip}    ingress-nginx-controller-admission" >> /etc/hosts
-  fi
-
-  # Enable Ingress step 2.
-  ip=`kubectl get nodes -o wide | sed -n "2p" | awk -F ' ' '{printf $6}'`
-  wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
-  sed -i "s#- --publish-status-address=localhost#- --publish-status-address=${ip}#g" ./deploy.yaml
-  kubectl apply -f deploy.yaml
-  kubefate_domain=`cat /etc/hosts | grep "kubefate.net"`
-  if [ "$kubefate_domain" == "" ]; then
-    sudo echo "${ip}    kubefate.net" >> /etc/hosts
-  else
-    sudo sed -i "/kubefate.net/d" /etc/hosts
-    sudo echo "${ip}    kubefate.net" >> /etc/hosts
   fi
 
   # Download KubeFATE Release Pack, KubeFATE Server Image v1.2.0 and Install KubeFATE Command Lines
