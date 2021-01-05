@@ -286,6 +286,8 @@ main()
     let i+=1
   done
   echo "Got Ingress Cluster IP: " $cluster_ip
+  echo "Waiting 60 seconds for Ingress webhook get ready..."
+  sleep 60
 
   # Reinstall Ingress
   kubectl apply -f deploy.yaml
