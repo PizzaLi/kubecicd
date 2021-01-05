@@ -256,8 +256,21 @@ main()
     curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/bin/kind
   fi
 
-  # Create a cluster using kind
+  # Create a cluster using kind with enable Ingress step 1.
   create_cluster_with_kind
+
+  # Load images to kind cluster
+  kind load docker-image jettech/kube-webhook-certgen:v1.5.0
+  kind load docker-image federatedai/kubefate
+  kind load docker-image federatedai/kubefate:v1.2.0
+  kind load docker-image library/mariadb:10
+  kind load docker-image mariadb:10
+
+  # Enable Ingress step 2.
+  ip=`kubectl get nodes -o wide | sed -n "2p" | awk -F ' ' '{printf $6}'`
+  wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
+  sed -i "s#- --publish-status-address=localhost#- --publish-status-address=${ip}#g" ./deploy.yaml
+  kubectl apply -f deploy.yaml
 
   # Download KubeFATE Release Pack, KubeFATE Server Image v1.2.0 and Install KubeFATE Command Lines
   curl -LO https://github.com/FederatedAI/KubeFATE/releases/download/${version}/kubefate-k8s-${version}.tar.gz && tar -xzf ./kubefate-k8s-${version}.tar.gz
@@ -273,12 +286,12 @@ main()
 
   # Create kube-fate namespace and account for KubeFATE service
   kubectl apply -f ./rbac-config.yaml
-  kubectl apply -f ./kubefate.yaml
+  # kubectl apply -f ./kubefate.yaml
 
   # Because the Dockerhub latest limitation, I suggest using 163 Image Repository instead.
-  # sed 's/mariadb:10/hub.c.163.com\/federatedai\/mariadb:10/g' kubefate.yaml > kubefate_163.yaml
-  # sed 's/registry: ""/registry: "hub.c.163.com\/federatedai"/g' cluster.yaml > cluster_163.yaml
-  # kubectl apply -f ./kubefate_163.yaml
+  sed 's/mariadb:10/hub.c.163.com\/federatedai\/mariadb:10/g' kubefate.yaml > kubefate_163.yaml
+  sed 's/registry: ""/registry: "hub.c.163.com\/federatedai"/g' cluster.yaml > cluster_163.yaml
+  kubectl apply -f ./kubefate_163.yaml
 
   # Add kubefate.net to host file
   # sudo -- sh -c "echo \"192.168.100.123 kubefate.net\"  >> /etc/hosts"
@@ -302,6 +315,7 @@ namespace: fate-9999
 chartName: fate
 chartVersion: v1.5.0
 partyId: 9999
+registry: "hub.c.163.com/federatedai"
 pullPolicy:
 persistence: false
 istio:
@@ -322,7 +336,7 @@ rollsite:
   nodePort: 30091
   partyList:
   - partyId: 10000
-    partyIp: 192.168.100.123
+    partyIp: ${ip}
     partyPort: 30101
 
 python:
@@ -337,6 +351,7 @@ namespace: fate-10000
 chartName: fate
 chartVersion: v1.5.0
 partyId: 10000
+registry: "hub.c.163.com/federatedai"
 pullPolicy:
 persistence: false
 istio:
@@ -357,7 +372,7 @@ rollsite:
   nodePort: 30101
   partyList:
   - partyId: 9999
-    partyIp: 192.168.100.123
+    partyIp: ${ip}
     partyPort: 30091
 
 python:
@@ -366,8 +381,10 @@ python:
   grpcNodePort: 30102
 EOF
 
+  # Start to install these two FATE cluster via KubeFATE with the following command
   kubefate cluster install -f ./fate-9999.yaml
   kubefate cluster install -f ./fate-10000.yaml
+
   # Clean working directory
   clean
 }
