@@ -261,9 +261,7 @@ main()
 
   # Load images to kind cluster
   kind load docker-image jettech/kube-webhook-certgen:v1.5.0
-  kind load docker-image federatedai/kubefate
   kind load docker-image federatedai/kubefate:v1.2.0
-  kind load docker-image library/mariadb:10
   kind load docker-image mariadb:10
 
   #
