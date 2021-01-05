@@ -346,7 +346,7 @@ main()
 
   # Copy the cluster.yaml sample in the working folder. One for party 9999, the other one for party 10000
   # cp ./cluster.yaml fate-9999.yaml && cp ./cluster.yaml fate-10000.yaml
-cat >> fate-9999.yaml << EOF
+cat > fate-9999.yaml << EOF
 name: fate-9999
 namespace: fate-9999
 chartName: fate
@@ -382,7 +382,7 @@ python:
   grpcNodePort: 30092
 EOF
 
-cat >> fate-10000.yaml << EOF
+cat > fate-10000.yaml << EOF
 name: fate-10000
 namespace: fate-10000
 chartName: fate
@@ -421,6 +421,7 @@ EOF
   # Start to install these two FATE cluster via KubeFATE with the following command
   kubefate cluster install -f ./fate-9999.yaml
   kubefate cluster install -f ./fate-10000.yaml
+  kubefate cluster ls
 
   # Clean working directory
   clean
