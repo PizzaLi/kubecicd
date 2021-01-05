@@ -267,7 +267,23 @@ main()
   kind load docker-image mariadb:10
 
   #
+  time_out=900
+  i=0
   cluster_ip=`kubectl get service -o wide -A | grep ingress-nginx-controller-admission | awk -F ' ' '{print $4}'`
+  while [ "$cluster_ip" == "" ]
+  do
+    if [ $i == $time_out ]; then
+        echo "Can't install Ingress, Please check you environment"
+        exit 1
+    fi
+
+    echo "Kind Ingress is not ready, waiting Ingress to get ready..."
+    cluster_ip=`kubectl get service -o wide -A | grep ingress-nginx-controller-admission | awk -F ' ' '{print $4}'`
+    sleep 1
+    let i+=1
+  done
+  echo "Got Ingress Cluster IP: " $cluster_ip
+    
   ingress_nginx_controller_admission=`cat /etc/hosts | grep "ingress-nginx-controller-admission"`
   if [ "$ingress_nginx_controller_admission" == "" ]; then
     sudo echo "${cluster_ip}    ingress-nginx-controller-admission" >> /etc/hosts
