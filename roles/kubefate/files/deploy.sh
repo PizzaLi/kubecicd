@@ -174,10 +174,6 @@ binary()
 
 clean()
 {
-  echo "Removing docker files..."
-  rm -rf docker
-  rm $docker_version.tgz
-
   echo "Deleting kind cluster..." 
   # kind delete cluster --name kubefate
 
@@ -186,13 +182,35 @@ clean()
   fi
 }
 
+create_cluster_with_kind()
+{
+  #kind create cluster --name kubefate
+cat <<EOF | kind create cluster --config=-
+    kind: Cluster
+    apiVersion: kind.x-k8s.io/v1alpha4
+    nodes:
+    - role: control-plane
+      kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+      extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+EOF
+}
+
 main()
 {
   clean
   # Check if docker is installed already
-  sudo mkdir -p /tmp/kubefate/ && cp ./deploy.sh /tmp/kubefate/
-
-  sudo docker ps
+  docker_status=`sudo docker ps`
   if [ $? == 0 ]; then
     echo "Docker is installed on this host, no need to install"
   else
@@ -227,7 +245,7 @@ main()
     binary
 
     # check if docker is installed correctly
-    sudo docker ps
+    docker=`sudo docker ps`
     if [ $? -ne == 0 ]; then
       echo "Fatal: Docker is not installed correctly"
       exit 1
@@ -236,10 +254,15 @@ main()
   fi
 
   # Install Kind
-  curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/bin/kind
+  kind_status=`sudo kind version`
+  if [ $? == 0 ]; then
+    echo "Kind is installed on this host, no need to install"
+  else
+    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/bin/kind
+  fi
 
   # Create a cluster using kind
-  kind create cluster --name kubefate
+  create_cluster_with_kind
 
   # Download KubeFATE Release Pack, KubeFATE Server Image v1.2.0 and Install KubeFATE Command Lines
   curl -LO https://github.com/FederatedAI/KubeFATE/releases/download/${version}/kubefate-k8s-${version}.tar.gz && tar -xzf ./kubefate-k8s-${version}.tar.gz
@@ -255,13 +278,15 @@ main()
 
   # Create kube-fate namespace and account for KubeFATE service
   kubectl apply -f ./rbac-config.yaml
+  kubectl apply -f ./kubefate.yaml
 
   # Because the Dockerhub latest limitation, I suggest using 163 Image Repository instead.
   # sed 's/mariadb:10/hub.c.163.com\/federatedai\/mariadb:10/g' kubefate.yaml > kubefate_163.yaml
   # sed 's/registry: ""/registry: "hub.c.163.com\/federatedai"/g' cluster.yaml > cluster_163.yaml
+  # kubectl apply -f ./kubefate_163.yaml
 
   # Add kubefate.net to host file
-  sudo -- sh -c "echo \"192.168.100.123 kubefate.net\"  >> /etc/hosts"
+  # sudo -- sh -c "echo \"192.168.100.123 kubefate.net\"  >> /etc/hosts"
 
   # Check the commands above have been executed correctly
   state=`kubefate version`
@@ -274,6 +299,82 @@ main()
   kubectl create namespace fate-9999
   kubectl create namespace fate-10000
 
+  # Copy the cluster.yaml sample in the working folder. One for party 9999, the other one for party 10000
+  # cp ./cluster.yaml fate-9999.yaml && cp ./cluster.yaml fate-10000.yaml
+cat >> fate-9999.yaml << EOF
+name: fate-9999
+namespace: fate-9999
+chartName: fate
+chartVersion: v1.5.0
+partyId: 9999
+registry: "hub.c.163.com/federatedai"
+pullPolicy:
+persistence: false
+istio:
+  enabled: false
+modules:
+  - rollsite
+  - clustermanager
+  - nodemanager
+  - mysql
+  - python
+  - fateboard
+  - client
+
+backend: eggroll
+
+rollsite:
+  type: NodePort
+  nodePort: 30091
+  partyList:
+  - partyId: 10000
+    partyIp: 192.168.100.123
+    partyPort: 30101
+
+python:
+  type: NodePort
+  httpNodePort: 30097
+  grpcNodePort: 30092
+EOF
+
+cat >> fate-10000.yaml << EOF
+name: fate-10000
+namespace: fate-10000
+chartName: fate
+chartVersion: v1.5.0
+partyId: 10000
+registry: "hub.c.163.com/federatedai"
+pullPolicy:
+persistence: false
+istio:
+  enabled: false
+modules:
+  - rollsite
+  - clustermanager
+  - nodemanager
+  - mysql
+  - python
+  - fateboard
+  - client
+
+backend: eggroll
+
+rollsite:
+  type: NodePort
+  nodePort: 30101
+  partyList:
+  - partyId: 9999
+    partyIp: 192.168.100.123
+    partyPort: 30091
+
+python:
+  type: NodePort
+  httpNodePort: 30107
+  grpcNodePort: 30102
+EOF
+
+  kubefate cluster install -f ./fate-9999.yaml
+  kubefate cluster install -f ./fate-10000.yaml
   # Clean working directory
   clean
 }
