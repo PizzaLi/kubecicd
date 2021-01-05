@@ -286,8 +286,11 @@ main()
     let i+=1
   done
   echo "Got Ingress Cluster IP: " $cluster_ip
-  echo "Waiting 60 seconds for Ingress webhook get ready..."
-  sleep 60
+  echo "Waiting for ${time_out} seconds util Ingress webhook get ready..."
+  kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=${time_out}s
 
   # Reinstall Ingress
   kubectl apply -f deploy.yaml
