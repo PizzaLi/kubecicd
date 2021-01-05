@@ -259,6 +259,13 @@ main()
   # Create a cluster using kind with enable Ingress step 1.
   create_cluster_with_kind
 
+  # Load images to kind cluster
+  kind load docker-image jettech/kube-webhook-certgen:v1.5.0
+  kind load docker-image federatedai/kubefate
+  kind load docker-image federatedai/kubefate:v1.2.0
+  kind load docker-image library/mariadb:10
+  kind load docker-image mariadb:10
+
   #
   cluster_ip=`kubectl get service -o wide -A | grep ingress-nginx-controller-admission | awk -F ' ' '{print $4}'`
   ingress_nginx_controller_admission=`cat /etc/hosts | grep "ingress-nginx-controller-admission"`
@@ -268,13 +275,6 @@ main()
     sudo sed -i "/ingress-nginx-controller-admission/d" /etc/hosts
     sudo echo "${cluster_ip}    ingress-nginx-controller-admission" >> /etc/hosts
   fi
-
-  # Load images to kind cluster
-  kind load docker-image jettech/kube-webhook-certgen:v1.5.0
-  kind load docker-image federatedai/kubefate
-  kind load docker-image federatedai/kubefate:v1.2.0
-  kind load docker-image library/mariadb:10
-  kind load docker-image mariadb:10
 
   # Enable Ingress step 2.
   ip=`kubectl get nodes -o wide | sed -n "2p" | awk -F ' ' '{printf $6}'`
