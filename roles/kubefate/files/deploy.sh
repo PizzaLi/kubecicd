@@ -292,7 +292,7 @@ main()
   kubectl wait --namespace ingress-nginx \
   --for=condition=ready pod \
   --selector=${selector} \
-  --timeout=${time_out}s
+  --timeout=3600s
 
   # Reinstall Ingress
   kubectl apply -f deploy.yaml
@@ -424,6 +424,8 @@ python:
 EOF
 
   # Start to install these two FATE cluster via KubeFATE with the following command
+  echo "Waiting for kubefate service get ready..."
+  sleep ${time_out}
   kubefate cluster install -f ./fate-9999.yaml
   kubefate cluster install -f ./fate-10000.yaml
   kubefate cluster ls
