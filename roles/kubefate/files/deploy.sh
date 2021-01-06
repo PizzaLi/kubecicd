@@ -265,8 +265,8 @@ main()
 
   # Enable Ingress step 2.
   curl -Lo ./ingress-nginx.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
-  sed -i "s#- --publish-status-address=localhost#- --publish-status-address=${ip}#g" ./deploy.yaml
-  kubectl apply -f deploy.yaml
+  sed -i "s#- --publish-status-address=localhost#- --publish-status-address=${ip}#g" ./ingress-nginx.yaml
+  kubectl apply -f ./ingress-nginx.yaml
 
   # Config Ingress
   time_out=120
@@ -294,7 +294,7 @@ main()
   --timeout=3600s
 
   # Reinstall Ingress
-  kubectl apply -f deploy.yaml
+  kubectl apply -f ./ingress-nginx.yaml
 
   ip=`kubectl get nodes -o wide | sed -n "2p" | awk -F ' ' '{printf $6}'`
   kubefate_domain=`cat /etc/hosts | grep "kubefate.net"`
