@@ -139,6 +139,11 @@ cat <<EOF | kind create cluster --config=-
         hostPort: 443
         protocol: TCP
 EOF
+
+  if [ $? -ne 0 ]; then
+    echo "Fatal: Install kind cluster failed"
+    exit 1
+  fi
 }
 
 enable_ingress()
