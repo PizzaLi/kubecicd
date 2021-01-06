@@ -109,6 +109,34 @@ check_cgroupfs()
   fi
 }
 
+install_separately()
+{
+  # Install Docker with different linux distibutions
+  get_dist_name
+  if [ $dist_name != "Unknown" ]; then
+    case $dist_name in
+      CentOS)
+        centos
+        ;;
+      Fedora)
+        fedora
+        ;;
+      Debian)
+        debian
+        ;;
+      Ubuntu)
+        ubuntu
+        ;;
+      *)
+        echo "Unsupported distribution name"
+    esac
+  else
+    echo "Fatal: Unknown system version"
+    exit 1
+  fi
+}
+
+# Check install conditions
 binary()
 {
   system_bit=`getconf LONG_BIT`
@@ -186,7 +214,7 @@ clean()
 create_cluster_with_kind()
 {
   #kind create cluster --name kubefate
-cat <<EOF | kind create cluster --config=-
+cat <<EOF | kind create cluster --name cicd --config=-
     kind: Cluster
     apiVersion: kind.x-k8s.io/v1alpha4
     nodes:
@@ -215,37 +243,27 @@ main()
   mkdir -p $deploydir
   cd $deploydir
 
+  # Check if kubectl is installed successfully
+  kubectl_status=`kubectl version`
+  if [ $? -eq 0 ]; then
+    echo "Kubectl is installed on this host, no need to install"
+  else
+    # Install the latest version of kubectl
+    curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x ./kubectl && sudo mv ./kubectl /usr/bin/
+    kubectl_status=`kubectl version`
+    if [ $? -ne 0 ]; then
+      echo "Fatal: Kubectl does not installed correctly"
+      exit 1
+    fi
+  fi
+
   # Check if docker is installed already
   docker_status=`sudo docker ps`
   if [ $? -eq 0 ]; then
     echo "Docker is installed on this host, no need to install"
   else
-    # Install the latest version of kubectl
-    # curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x ./kubectl && sudo mv ./kubectl /usr/bin/
-
     # Install Docker with different linux distibutions
-    # get_dist_name
-    # if [ $dist_name != "Unknown" ]; then
-    #   case $dist_name in
-    #     CentOS)
-    #       centos
-    #       ;;
-    #     Fedora)
-    #       fedora
-    #       ;;
-    #     Debian)
-    #       debian
-    #       ;;
-    #     Ubuntu)
-    #       ubuntu
-    #       ;;
-    #     *)
-    #       echo "Unsupported distribution name"
-    #   esac
-    # else
-    #   echo "Fatal: Unknown system version"
-    #   exit 1
-    # fi
+    # install_separately
 
     # Install Docker with binary file.
     binary
@@ -253,7 +271,7 @@ main()
     # check if docker is installed correctly
     docker=`sudo docker ps`
     if [ $? -ne 0 ]; then
-      echo "Fatal: Docker is not installed correctly"
+      echo "Fatal: Docker does not installed correctly"
       exit 1
     fi
   fi
