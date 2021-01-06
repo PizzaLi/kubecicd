@@ -270,7 +270,7 @@ main()
   kubectl apply -f deploy.yaml
 
   # Config Ingress
-  time_out=900
+  time_out=120
   i=0
   cluster_ip=`kubectl get service -o wide -A | grep ingress-nginx-controller-admission | awk -F ' ' '{print $4}'`
   while [ "$cluster_ip" == "" ]
