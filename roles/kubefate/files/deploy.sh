@@ -96,10 +96,10 @@ binary_install()
   fi
 
   # Download docker
-  curl -Lo $docker_version.tgz https://download.docker.com/linux/static/stable/x86_64/$docker_version.tgz
+  sudo curl -Lo $docker_version.tgz https://download.docker.com/linux/static/stable/x86_64/$docker_version.tgz
 
   # Extract the archive using the tar utility
-  tar -xzf $docker_version.tgz
+  sudo tar -xzf $docker_version.tgz
 
   # Move the binaries to a directory on your executable path, such as /usr/bin/
   sudo cp docker/* /usr/bin/
