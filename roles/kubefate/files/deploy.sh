@@ -270,7 +270,7 @@ main()
   create_cluster_with_kind
 
   # Load images to kind cluster
-  docker pull jettech/kube-webhook-certgen:v1.5.0 federatedai/kubefate:v1.2.0 mariadb:10
+  docker pull jettech/kube-webhook-certgen:v1.5.0
   docker pull federatedai/kubefate:v1.2.0
   docker pull mariadb:10
   kind load docker-image jettech/kube-webhook-certgen:v1.5.0
