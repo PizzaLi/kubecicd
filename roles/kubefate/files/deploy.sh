@@ -69,45 +69,6 @@ ubuntu()
   sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 }
 
-check_cgroupfs()
-{
-  if grep -v '^#' /etc/fstab | grep -q cgroup; then
-    echo 'cgroups mounted from fstab, not mounting /sys/fs/cgroup'
-    exit 1
-  fi
-
-  # kernel provides cgroups?
-  if [ ! -e /proc/cgroups ]; then
-    exit 1
-  fi
-
-  # if we don't even have the directory we need, something else must be wrong
-  if [ ! -d /sys/fs/cgroup ]; then
-    exit 1
-  fi
-
-  # mount /sys/fs/cgroup if not already done
-  if ! mountpoint -q /sys/fs/cgroup; then
-    mount -t tmpfs -o uid=0,gid=0,mode=0755 cgroup /sys/fs/cgroup
-  fi
-
-  cd /sys/fs/cgroup
-
-  # get/mount list of enabled cgroup controllers
-  for sys in $(awk '!/^#/ { if ($4 == 1) print $1 }' /proc/cgroups); do
-    mkdir -p $sys
-    if ! mountpoint -q $sys; then
-        if ! mount -n -t cgroup -o $sys cgroup $sys; then
-            rmdir $sys || true
-        fi
-    fi
-  done
-
-  if [ -e /sys/fs/cgroup/memory/memory.use_hierarchy ]; then
-      echo 1 > /sys/fs/cgroup/memory/memory.use_hierarchy
-  fi
-}
-
 install_separately()
 {
   # Install Docker with different linux distibutions
@@ -133,71 +94,6 @@ install_separately()
     echo "Fatal: Unknown system version"
     exit 1
   fi
-}
-
-# Check install conditions
-binary_install()
-{
-  system_bit=`getconf LONG_BIT`
-  if [ $system_bit == 64 ]; then
-    echo "System bit: " $system_bit
-  else
-    echo "Fatal: Unsupport system"
-    exit 1
-  fi
-
-  main=`uname -r | awk -F '.' '{print $1}'`
-  minor=`uname -r | awk -F '.' '{print $2}'`
-  if [ $main$minor -ge 310 ]; then
-    echo "Kernel version: " `uname -r`
-  else
-    echo "Fatal: Kernel less then 310 is unsupported"
-    exit 1
-  fi
-
-  git_version=`git version | awk -F ' ' '{print $3}'`
-  main=`echo $git_version | awk -F '.' '{print $1}'`
-  minor=`echo $git_version | awk -F '.' '{print $2}'`
-  if [ $main$minor -ge 17 ]; then
-    echo "Git version: " $git_version
-  else
-    echo "Fatal: Git version less then 1.7"
-    exit 1
-  fi
-
-  ps=`ps`
-  if [ $? -ne 0 ]; then
-    echo "Fatal: ps is not usable"
-    exit 1
-  fi
-
-  xz_version=`xz --version | awk -F ') ' '{print $2}'`
-  main=`echo $xz_version | awk -F '.' '{print $1}'`
-  minor=`echo $xz_version | awk -F '.' '{print $2}'`
-  if [ $main$minor -ge 49 ]; then
-    echo "XZ version: " $xz_version
-  else
-    echo "Fatal: Xz version less then 4.9"
-    exit 1
-  fi
-
-  check_cgroupfs
-  if [ $? -ne 0 ]; then
-    echo "Fatal: cgroup is not suitable"
-    exit 1
-  fi
-
-  # Download docker
-  curl -Lo ./$docker_version.tgz https://download.docker.com/linux/static/stable/x86_64/$docker_version.tgz
-
-  # Extract the archive using the tar utility
-  tar -xzf $docker_version.tgz
-
-  # Move the binaries to a directory on your executable path, such as /usr/bin/
-  sudo cp docker/* /usr/bin/
-
-  # Start the Docker daemon
-  sudo dockerd $
 }
 
 clean()
@@ -268,9 +164,6 @@ main()
   else
     # Install Docker with different linux distibutions
     install_separately
-
-    # Install Docker with binary file.
-    # binary_install
 
     # check if docker is installed correctly
     docker=`sudo docker ps`
