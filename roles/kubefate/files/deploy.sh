@@ -53,20 +53,20 @@ debian()
 
 ubuntu()
 {
-  sudo apt-get remove docker docker-engine docker.io containerd runc
-  sudo apt-get update
-  sudo apt-get install -y \
+  apt-get remove docker docker-engine docker.io containerd runc
+  apt-get update
+  apt-get install -y \
     apt-transport-https \
     ca-certificates \
     curl \
     gnupg-agent \
     software-properties-common
-  sudo add-apt-repository \
+  add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
-  sudo apt-get update
-  sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+  apt-get update
+  apt-get install -y docker-ce docker-ce-cli containerd.io
 }
 
 install_separately()
@@ -99,7 +99,7 @@ install_separately()
 clean()
 {
   if [ -d $deploydir ]; then
-    sudo rm -rf $deploydir
+    rm -rf $deploydir
   fi
 
   echo "Deleting kind cluster..." 
@@ -132,9 +132,9 @@ EOF
 main()
 {
   if [ -d $deploydir ]; then
-    sudo rm -rf $deploydir
+    rm -rf $deploydir
   fi
-  mkdir -p $deploydir
+  mkdir -p $deploydir && mv ./ingress-nginx.yaml $deploydir
   cd $deploydir
 
   curl_status=`curl --version`
@@ -149,7 +149,7 @@ main()
     echo "Kubectl is installed on this host, no need to install"
   else
     # Install the latest version of kubectl
-    curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x ./kubectl && sudo mv ./kubectl /usr/bin/
+    curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x ./kubectl && mv ./kubectl /usr/bin/
     kubectl_status=`kubectl version --client`
     if [ $? -ne 0 ]; then
       echo "Fatal: Kubectl does not installed correctly"
@@ -158,7 +158,7 @@ main()
   fi
 
   # Check if docker is installed already
-  docker_status=`sudo docker ps`
+  docker_status=`docker ps`
   if [ $? -eq 0 ]; then
     echo "Docker is installed on this host, no need to install"
   else
@@ -166,7 +166,7 @@ main()
     install_separately
 
     # check if docker is installed correctly
-    docker=`sudo docker ps`
+    docker=`docker ps`
     if [ $? -ne 0 ]; then
       echo "Fatal: Docker does not installed correctly"
       exit 1
@@ -174,11 +174,11 @@ main()
   fi
 
   # Install Kind
-  kind_status=`sudo kind version`
+  kind_status=`kind version`
   if [ $? -eq 0 ]; then
     echo "Kind is installed on this host, no need to install"
   else
-    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/bin/kind
+    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 && chmod +x ./kind && mv ./kind /usr/bin/kind
   fi
 
   # Create a cluster using kind with enable Ingress step 1.
@@ -193,7 +193,6 @@ main()
   kind load docker-image mariadb:10
 
   # Enable Ingress step 2.
-  curl -Lo ./ingress-nginx.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
   sed -i "s#- --publish-status-address=localhost#- --publish-status-address=${ip}#g" ./ingress-nginx.yaml
   kubectl apply -f ./ingress-nginx.yaml
 
@@ -228,25 +227,25 @@ main()
   ip=`kubectl get nodes -o wide | sed -n "2p" | awk -F ' ' '{printf $6}'`
   kubefate_domain=`cat /etc/hosts | grep "kubefate.net"`
   if [ "$kubefate_domain" == "" ]; then
-    sudo echo "${ip}    kubefate.net" >> /etc/hosts
+    echo "${ip}    kubefate.net" >> /etc/hosts
   else
-    sudo sed -i "/kubefate.net/d" /etc/hosts
-    sudo echo "${ip}    kubefate.net" >> /etc/hosts
+    sed -i "/kubefate.net/d" /etc/hosts
+    echo "${ip}    kubefate.net" >> /etc/hosts
   fi
     
   ingress_nginx_controller_admission=`cat /etc/hosts | grep "ingress-nginx-controller-admission"`
   if [ "$ingress_nginx_controller_admission" == "" ]; then
-    sudo echo "${cluster_ip}    ingress-nginx-controller-admission" >> /etc/hosts
+    echo "${cluster_ip}    ingress-nginx-controller-admission" >> /etc/hosts
   else
-    sudo sed -i "/ingress-nginx-controller-admission/d" /etc/hosts
-    sudo echo "${cluster_ip}    ingress-nginx-controller-admission" >> /etc/hosts
+    sed -i "/ingress-nginx-controller-admission/d" /etc/hosts
+    echo "${cluster_ip}    ingress-nginx-controller-admission" >> /etc/hosts
   fi
 
   # Download KubeFATE Release Pack, KubeFATE Server Image v1.2.0 and Install KubeFATE Command Lines
   curl -LO https://github.com/FederatedAI/KubeFATE/releases/download/${version}/kubefate-k8s-${version}.tar.gz && tar -xzf ./kubefate-k8s-${version}.tar.gz
 
   # Move the kubefate executable binary to path,
-  sudo chmod +x ./kubefate && sudo mv ./kubefate /usr/bin
+  chmod +x ./kubefate && mv ./kubefate /usr/bin
 
   # Download the KubeFATE Server Image
   curl -LO https://github.com/FederatedAI/KubeFATE/releases/download/${version}/kubefate-${kubefate_version}.docker
@@ -262,9 +261,6 @@ main()
   sed 's/mariadb:10/hub.c.163.com\/federatedai\/mariadb:10/g' kubefate.yaml > kubefate_163.yaml
   sed 's/registry: ""/registry: "hub.c.163.com\/federatedai"/g' cluster.yaml > cluster_163.yaml
   kubectl apply -f ./kubefate_163.yaml
-
-  # Add kubefate.net to host file
-  # sudo -- sh -c "echo \"192.168.100.123 kubefate.net\"  >> /etc/hosts"
 
   # Check the commands above have been executed correctly
   state=`kubefate version`
