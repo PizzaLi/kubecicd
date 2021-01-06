@@ -141,61 +141,8 @@ cat <<EOF | kind create cluster --config=-
 EOF
 }
 
-main()
+enable_ingress()
 {
-  if [ -d $deploydir ]; then
-    sudo rm -rf $deploydir
-  fi
-  mkdir -p $deploydir
-  cd $deploydir
-
-  curl_status=`curl --version`
-  if [ $? -ne 0 ]; then
-    echo "Fatal: Curl does not installed correctly"
-    exit 1
-  fi
-
-  # Check if kubectl is installed successfully
-  kubectl_status=`kubectl version --client`
-  if [ $? -eq 0 ]; then
-    echo "Kubectl is installed on this host, no need to install"
-  else
-    # Install the latest version of kubectl
-    curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x ./kubectl && sudo mv ./kubectl /usr/bin/
-    kubectl_status=`kubectl version --client`
-    if [ $? -ne 0 ]; then
-      echo "Fatal: Kubectl does not installed correctly"
-      exit 1
-    fi
-  fi
-
-  # Check if docker is installed already
-  docker_status=`sudo docker ps`
-  if [ $? -eq 0 ]; then
-    echo "Docker is installed on this host, no need to install"
-  else
-    # Install Docker with binary file.
-    binary_install
-
-    # check if docker is installed correctly
-    docker=`sudo docker ps`
-    if [ $? -ne 0 ]; then
-      echo "Fatal: Docker does not installed correctly"
-      exit 1
-    fi
-  fi
-
-  # Install Kind
-  kind_status=`sudo kind version`
-  if [ $? -eq 0 ]; then
-    echo "Kind is installed on this host, no need to install"
-  else
-    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/bin/kind
-  fi
-
-  # Create a cluster using kind with enable Ingress step 1.
-  create_cluster_with_kind
-
   # Load images to kind cluster
   docker pull jettech/kube-webhook-certgen:v1.5.0
   docker pull federatedai/kubefate:v1.2.0
@@ -234,9 +181,12 @@ main()
   --selector=${selector} \
   --timeout=3600s
 
-  # Reinstall Ingress
+  # Apply Ingress config
   kubectl apply -f ./ingress-nginx.yaml
+}
 
+add_domain()
+{
   ip=`kubectl get nodes -o wide | sed -n "2p" | awk -F ' ' '{printf $6}'`
   kubefate_domain=`cat /etc/hosts | grep "kubefate.net"`
   if [ "$kubefate_domain" == "" ]; then
@@ -253,7 +203,10 @@ main()
     sudo sed -i "/ingress-nginx-controller-admission/d" /etc/hosts
     sudo echo "${cluster_ip}    ingress-nginx-controller-admission" >> /etc/hosts
   fi
+}
 
+deploy_kubefate()
+{
   # Download KubeFATE Release Pack, KubeFATE Server Image v1.2.0 and Install KubeFATE Command Lines
   curl -LO https://github.com/FederatedAI/KubeFATE/releases/download/${version}/kubefate-k8s-${version}.tar.gz && tar -xzf ./kubefate-k8s-${version}.tar.gz
 
@@ -275,16 +228,16 @@ main()
   sed 's/registry: ""/registry: "hub.c.163.com\/federatedai"/g' cluster.yaml > cluster_163.yaml
   kubectl apply -f ./kubefate_163.yaml
 
-  # Add kubefate.net to host file
-  # sudo -- sh -c "echo \"192.168.100.123 kubefate.net\"  >> /etc/hosts"
-
   # Check the commands above have been executed correctly
   state=`kubefate version`
   if [ $? -ne 0 ]; then
     echo "Fatal: There is something wrong with the installation of kubefate, please check"
     exit 1
   fi
+}
 
+deploy_fate()
+{
   # Install two fate parties: fate-9999 and fate-10000
   kubectl create namespace fate-9999
   kubectl create namespace fate-10000
@@ -381,6 +334,74 @@ EOF
   kubefate cluster install -f ./fate-9999.yaml
   kubefate cluster install -f ./fate-10000.yaml
   kubefate cluster ls
+}
+
+main()
+{
+  if [ -d $deploydir ]; then
+    sudo rm -rf $deploydir
+  fi
+  mkdir -p $deploydir
+  cd $deploydir
+
+  curl_status=`curl --version`
+  if [ $? -ne 0 ]; then
+    echo "Fatal: Curl does not installed correctly"
+    exit 1
+  fi
+
+  # Check if kubectl is installed successfully
+  kubectl_status=`kubectl version --client`
+  if [ $? -eq 0 ]; then
+    echo "Kubectl is installed on this host, no need to install"
+  else
+    # Install the latest version of kubectl
+    curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x ./kubectl && sudo mv ./kubectl /usr/bin/
+    kubectl_status=`kubectl version --client`
+    if [ $? -ne 0 ]; then
+      echo "Fatal: Kubectl does not installed correctly"
+      exit 1
+    fi
+  fi
+
+  # Check if docker is installed already
+  docker_status=`sudo docker ps`
+  if [ $? -eq 0 ]; then
+    echo "Docker is installed on this host, no need to install"
+  else
+    # Install Docker with binary file.
+    binary_install
+
+    # check if docker is installed correctly
+    docker=`sudo docker ps`
+    if [ $? -ne 0 ]; then
+      echo "Fatal: Docker does not installed correctly"
+      exit 1
+    fi
+  fi
+
+  # Install Kind
+  kind_status=`sudo kind version`
+  if [ $? -eq 0 ]; then
+    echo "Kind is installed on this host, no need to install"
+  else
+    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/bin/kind
+  fi
+
+  # Create a cluster using kind with enable Ingress step 1.
+  create_cluster_with_kind
+
+  # Enable Ingress
+  enable_ingress
+
+  # Add domain into host
+  add_domain
+
+  # Deploy KubeFATE
+  deploy_kubefate
+
+  # Deploy_FATE
+  deploy_fate
 
   # Clean working directory
   clean
