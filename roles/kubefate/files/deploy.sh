@@ -96,7 +96,7 @@ binary_install()
   fi
 
   # Download docker
-  curl -Lo ./$docker_version.tgz https://download.docker.com/linux/static/stable/x86_64/$docker_version.tgz
+  curl -Lo $docker_version.tgz https://download.docker.com/linux/static/stable/x86_64/$docker_version.tgz
 
   # Extract the archive using the tar utility
   tar -xzf $docker_version.tgz
@@ -361,6 +361,7 @@ main()
   if [ $? -eq 0 ]; then
     echo "Kubectl is installed on this host, no need to install"
   else
+    echo "Installing kubectl"
     # Install the latest version of kubectl
     curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x ./kubectl && sudo mv ./kubectl /usr/bin/
     kubectl_status=`kubectl version --client`
@@ -375,6 +376,7 @@ main()
   if [ $? -eq 0 ]; then
     echo "Docker is installed on this host, no need to install"
   else
+    echo "Installing docker"
     # Install Docker with binary file.
     binary_install
 
