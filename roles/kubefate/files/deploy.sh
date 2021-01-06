@@ -152,7 +152,6 @@ enable_ingress()
   kind load docker-image mariadb:10
 
   # Enable Ingress step 2.
-  curl -Lo ./ingress-nginx.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
   sed -i "s#- --publish-status-address=localhost#- --publish-status-address=${ip}#g" ./ingress-nginx.yaml
   kubectl apply -f ./ingress-nginx.yaml
 
@@ -341,7 +340,7 @@ main()
   if [ -d $deploydir ]; then
     sudo rm -rf $deploydir
   fi
-  mkdir -p $deploydir
+  mkdir -p $deploydir && mv ./ingress-nginx.yaml ./$deploydir
   cd $deploydir
 
   curl_status=`curl --version`
