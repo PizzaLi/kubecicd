@@ -94,18 +94,6 @@ binary_install()
     echo "Fatal: cgroup is not suitable"
     exit 1
   fi
-
-  # Download docker
-  sudo curl -LO https://download.docker.com/linux/static/stable/x86_64/$docker_version.tgz
-
-  # Extract the archive using the tar utility
-  sudo tar -xzf $docker_version.tgz
-
-  # Move the binaries to a directory on your executable path, such as /usr/bin/
-  sudo cp docker/* /usr/bin/
-
-  # Start the Docker daemon
-  sudo dockerd $
 }
 
 clean()
@@ -379,6 +367,17 @@ main()
     echo "Installing docker"
     # Install Docker with binary file.
     binary_install
+    # Download docker
+    sudo curl -LO https://download.docker.com/linux/static/stable/x86_64/$docker_version.tgz
+
+    # Extract the archive using the tar utility
+    tar -xzf $docker_version.tgz
+
+    # Move the binaries to a directory on your executable path, such as /usr/bin/
+    sudo cp docker/* /usr/bin/
+
+    # Start the Docker daemon
+    sudo dockerd $
 
     # check if docker is installed correctly
     docker=`sudo docker ps`
