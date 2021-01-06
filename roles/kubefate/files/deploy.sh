@@ -160,7 +160,7 @@ binary()
   fi
 
   # Download docker
-  wget https://download.docker.com/linux/static/stable/x86_64/$docker_version.tgz
+  curl -Lo ./$docker_version.tgz https://download.docker.com/linux/static/stable/x86_64/$docker_version.tgz
 
   # Extract the archive using the tar utility
   tar -xzf $docker_version.tgz
@@ -265,7 +265,7 @@ main()
   kind load docker-image mariadb:10
 
   # Enable Ingress step 2.
-  wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
+  curl -Lo ./ingress-nginx.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
   sed -i "s#- --publish-status-address=localhost#- --publish-status-address=${ip}#g" ./deploy.yaml
   kubectl apply -f deploy.yaml
 
@@ -287,9 +287,11 @@ main()
   done
   echo "Got Ingress Cluster IP: " $cluster_ip
   echo "Waiting for ${time_out} seconds util Ingress webhook get ready..."
+  # sleep ${time_out}
+  selector="app.kubernetes.io/component=controller"
   kubectl wait --namespace ingress-nginx \
   --for=condition=ready pod \
-  --selector=app.kubernetes.io/component=controller \
+  --selector=${selector}
   --timeout=${time_out}s
 
   # Reinstall Ingress
