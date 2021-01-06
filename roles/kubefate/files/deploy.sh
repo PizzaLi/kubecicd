@@ -204,7 +204,6 @@ EOF
 
 main()
 {
-  clean
   # Check if docker is installed already
   docker_status=`sudo docker ps`
   if [ $? -eq 0 ]; then
@@ -426,6 +425,18 @@ EOF
   # Start to install these two FATE cluster via KubeFATE with the following command
   echo "Waiting for kubefate service get ready..."
   sleep ${time_out}
+  selector_kubefate="fate=kubefate"
+  kubectl wait --namespace kube-fate \
+  --for=condition=ready pod \
+  --selector=${selector_kubefate} \
+  --timeout=3600s
+
+  selector_mariadb="fate=mariadb"
+  kubectl wait --namespace kube-fate \
+  --for=condition=ready pod \
+  --selector=${selector_mariadb} \
+  --timeout=3600s
+
   kubefate cluster install -f ./fate-9999.yaml
   kubefate cluster install -f ./fate-10000.yaml
   kubefate cluster ls
