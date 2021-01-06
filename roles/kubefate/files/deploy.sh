@@ -36,7 +36,7 @@ fedora()
   dnf remove docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-selinux docker-engine-selinux docker-engine
   dnf -y install dnf-plugins-core
   dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-  dnf install docker-ce docker-ce-cli containerd.io
+  dnf install -y docker-ce docker-ce-cli containerd.io
   systemctl start docker
 }
 
@@ -44,7 +44,7 @@ debian()
 {
   apt-get remove docker docker-engine docker.io containerd runc
   apt-get update
-  apt-get install apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+  apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
   curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
   add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
   apt-get update
@@ -55,7 +55,7 @@ ubuntu()
 {
   sudo apt-get remove docker docker-engine docker.io containerd runc
   sudo apt-get update
-  sudo apt-get install \
+  sudo apt-get install -y \
     apt-transport-https \
     ca-certificates \
     curl \
@@ -66,7 +66,7 @@ ubuntu()
    $(lsb_release -cs) \
    stable"
   sudo apt-get update
-  sudo apt-get install docker-ce docker-ce-cli containerd.io
+  sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 }
 
 check_cgroupfs()
