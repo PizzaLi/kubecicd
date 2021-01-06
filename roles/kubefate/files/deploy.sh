@@ -243,14 +243,20 @@ main()
   mkdir -p $deploydir
   cd $deploydir
 
+  curl_status=`curl --version`
+  if [ $? -ne 0 ]; then
+    echo "Fatal: Curl does not installed correctly"
+    exit 1
+  fi
+
   # Check if kubectl is installed successfully
-  kubectl_status=`kubectl version`
+  kubectl_status=`kubectl version | grep "Client Version: version.Info"`
   if [ $? -eq 0 ]; then
     echo "Kubectl is installed on this host, no need to install"
   else
     # Install the latest version of kubectl
     curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x ./kubectl && sudo mv ./kubectl /usr/bin/
-    kubectl_status=`kubectl version`
+    kubectl_status=`kubectl version | grep "Client Version: version.Info"`
     if [ $? -ne 0 ]; then
       echo "Fatal: Kubectl does not installed correctly"
       exit 1
@@ -291,9 +297,9 @@ main()
   docker pull jettech/kube-webhook-certgen:v1.5.0
   docker pull federatedai/kubefate:v1.2.0
   docker pull mariadb:10
-  kind load docker-image jettech/kube-webhook-certgen:v1.5.0
-  kind load docker-image federatedai/kubefate:v1.2.0
-  kind load docker-image mariadb:10
+  kind load docker-image jettech/kube-webhook-certgen:v1.5.0 --name cicd
+  kind load docker-image federatedai/kubefate:v1.2.0 --name cicd
+  kind load docker-image mariadb:10 --name cicd
 
   # Enable Ingress step 2.
   curl -Lo ./ingress-nginx.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
