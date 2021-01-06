@@ -1,11 +1,9 @@
 #! /bin/bash
-
 version=v1.5.0
 kubefate_version=v1.2.0
 docker_version=docker-19.03.10
 dist_name=""
 deploydir="cicd"
-cluster_name="cicd"
 
 # Get distribution
 get_dist_name()
@@ -209,13 +207,12 @@ clean()
   fi
 
   echo "Deleting kind cluster..." 
-  # kind delete cluster --name ${cluster_name}
+  # kind delete cluster
 }
 
 create_cluster_with_kind()
 {
-  #kind create cluster --name kubefate
-cat <<EOF | kind create cluster --name ${cluster_name} --config=-
+cat <<EOF | kind create cluster --config=-
     kind: Cluster
     apiVersion: kind.x-k8s.io/v1alpha4
     nodes:
@@ -298,9 +295,9 @@ main()
   docker pull jettech/kube-webhook-certgen:v1.5.0
   docker pull federatedai/kubefate:v1.2.0
   docker pull mariadb:10
-  kind load docker-image jettech/kube-webhook-certgen:v1.5.0 --name ${cluster_name}
-  kind load docker-image federatedai/kubefate:v1.2.0 --name ${cluster_name}
-  kind load docker-image mariadb:10 --name ${cluster_name}
+  kind load docker-image jettech/kube-webhook-certgen:v1.5.0
+  kind load docker-image federatedai/kubefate:v1.2.0
+  kind load docker-image mariadb:10
 
   # Enable Ingress step 2.
   curl -Lo ./ingress-nginx.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
