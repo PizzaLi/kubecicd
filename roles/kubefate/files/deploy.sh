@@ -136,7 +136,7 @@ install_separately()
 }
 
 # Check install conditions
-binary()
+binary_install()
 {
   system_bit=`getconf LONG_BIT`
   if [ $system_bit == 64 ]; then
@@ -270,7 +270,7 @@ main()
     # install_separately
 
     # Install Docker with binary file.
-    binary
+    binary_install
 
     # check if docker is installed correctly
     docker=`sudo docker ps`
