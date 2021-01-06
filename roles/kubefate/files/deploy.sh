@@ -4,6 +4,7 @@ version=v1.5.0
 kubefate_version=v1.2.0
 docker_version=docker-19.03.10
 dist_name=""
+deploydir="cicd"
 
 # Get distribution
 get_dist_name()
@@ -174,6 +175,10 @@ binary()
 
 clean()
 {
+  if [ -d $deploydir ]; then
+    sudo rm -rf $deploydir
+  fi
+
   echo "Deleting kind cluster..." 
   # kind delete cluster --name kubefate
 }
@@ -204,6 +209,12 @@ EOF
 
 main()
 {
+  if [ -d $deploydir ]; then
+    sudo rm -rf $deploydir
+  fi
+  mkdir -p $deploydir
+  cd $deploydir
+
   # Check if docker is installed already
   docker_status=`sudo docker ps`
   if [ $? -eq 0 ]; then
@@ -259,6 +270,7 @@ main()
   create_cluster_with_kind
 
   # Load images to kind cluster
+  docker pull jettech/kube-webhook-certgen:v1.5.0 federatedai/kubefate:v1.2.0 mariadb:10
   kind load docker-image jettech/kube-webhook-certgen:v1.5.0
   kind load docker-image federatedai/kubefate:v1.2.0
   kind load docker-image mariadb:10
