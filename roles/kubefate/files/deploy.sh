@@ -10,7 +10,7 @@ get_dist_name()
 {
   if grep -Eqii "CentOS" /etc/issue || grep -Eq "CentOS" /etc/*-release; then
         dist_name='CentOS'
-  elif grep -Eqi "Red Hat Enterprise Linux Server" /etc/issue || grep -Eq "Red Hat Enterprise Linux Server" /etc/*-release; then
+  elif grep -Eqi "Fedora" /etc/issue || grep -Eq "Fedora" /etc/*-release; then
         dist_name='Fedora'
   elif grep -Eqi "Debian" /etc/issue || grep -Eq "Debian" /etc/*-release; then
         dist_name='Debian'
@@ -368,6 +368,8 @@ EOF
   --selector=${selector_mariadb} \
   --timeout=3600s
 
+  echo "Waiting for kubefate service get ready..."
+  sleep ${time_out}
   kubefate cluster install -f ./fate-9999.yaml
   kubefate cluster install -f ./fate-10000.yaml
   kubefate cluster ls
