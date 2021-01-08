@@ -77,14 +77,6 @@
         state: directory
       register: check_if_changed
 
-    # - name: Check if the lock_dir needed to be recreated
-    #   debug:
-    #     msg: "CHECK This means some worker deleted the lock file: {{ check_if_changed.changed }}, increase the delay after remove lock file lock_dir above"
-    #   when: check_if_changed.changed
-    # - assert:
-    #     that:
-    #       - not check_if_changed.changed
-
     - name: Please wait, Job is running...
       wait_for:
         delay: 20
